@@ -46,6 +46,7 @@ ENV/
 
 # Data files (can be regenerated)
 *.csv
+!sample_test.csv
 !sample_test.csv.example
 
 # Logs
