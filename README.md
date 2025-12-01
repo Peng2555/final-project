@@ -1,12 +1,12 @@
 # 股票价格预测项目 - 基于LoRA大模型微调
 
-这是一个使用**LoRA（Low-Rank Adaptation）技术微调大语言模型**进行股票价格预测的项目。项目使用PyTorch和Transformers框架，支持GPT-2等大模型，通过LoRA高效微调，能够预测未来3天的股票收盘价。
+这是一个使用**LoRA（Low-Rank Adaptation）技术微调大语言模型**进行股票价格预测的项目。项目使用PyTorch和Transformers框架，默认采用 **Qwen3-0.6B** 作为基础模型，通过LoRA高效微调，能够预测未来3天的股票收盘价。
 
 ## 项目简介
 
-本项目通过**LoRA微调大语言模型**来预测股票价格。主要功能包括：
+本项目通过**LoRA微调大语言模型（Qwen3-0.6B）**来预测股票价格。主要功能包括：
 - 从Yahoo Finance下载股票历史数据
-- 自动下载预训练大语言模型（GPT-2 Medium推荐）
+- 自动下载或本地加载预训练大语言模型（默认：Qwen3-0.6B）
 - 使用LoRA技术高效微调大模型（只需训练少量参数）
 - 将时间序列数据转换为文本格式，利用大语言模型的理解能力
 - 支持模型训练和推理
@@ -35,9 +35,10 @@
 │   ├── framework.py
 │   ├── sample_test.csv
 │   └── predictions.csv
-├── models/                  # 下载的预训练模型（已忽略）
+├── models/                  # 下载的预训练模型（可选，已忽略）
+├── Qwen3-0.6B/              # 默认Qwen模型存放目录（已忽略）
 ├── checkpoints/             # 训练检查点（已忽略）
-├── sample_test.csv          # 示例测试数据（由download.py生成，已忽略）
+├── sample_test.csv          # 示例测试数据（由download.py生成）
 └── predictions.csv          # 预测结果输出（已忽略）
 ```
 
@@ -64,18 +65,20 @@ pip install -r requirements.txt
 
 ### 方式一：使用LoRA微调大模型（推荐）
 
-#### 1. 下载预训练大模型
+#### 1. 准备预训练大模型
 
-首先下载GPT-2 Medium模型（推荐，约345M参数）：
+默认使用 **Qwen/Qwen3-0.6B**（约0.6B参数，支持中文场景，易于LoRA微调）。
 
 ```bash
-python download_model.py --model gpt2-medium --save_dir ./models
+# 方式一：直接使用 Hugging Face 名称（联网）
+python download_model.py --model Qwen/Qwen3-0.6B --save_dir ./Qwen3-0.6B
+
+# 方式二：如果已手动下载，可指定本地目录
+# 假设模型位于 ./Qwen3-0.6B
 ```
 
-其他可选模型：
-- `gpt2` - 最小模型（124M参数）
-- `gpt2-large` - 大型模型（774M参数）
-- `gpt2-xl` - 超大型模型（1.5B参数）
+> 如果需要其他模型，可将 `--model` 替换为 Hugging Face 上的任何 CausalLM 模型名称，
+> 例如 `Qwen/Qwen1.5-0.5B`、`meta-llama/Llama-2-7b-hf` 等（需注意授权）。
 
 #### 2. 下载股票数据
 
@@ -88,7 +91,7 @@ python download.py --ticker AAPL --period 1y
 ```bash
 python train_lora.py \
     --data sample_test.csv \
-    --model_path ./models/gpt2-medium \
+    --model_path ./Qwen3-0.6B \
     --epochs 20 \
     --batch_size 4 \
     --learning_rate 1e-4 \
@@ -103,7 +106,7 @@ python train_lora.py \
 ```bash
 python framework_llm.py \
     --test_csv sample_test.csv \
-    --model_path ./models/gpt2-medium \
+    --model_path ./Qwen3-0.6B \
     --lora_weights ./checkpoints/best_lora_weights.pth \
     --output predictions.csv
 ```
@@ -127,11 +130,11 @@ python framework.py --model_path model.pth --test_csv sample_test.csv
 
 ### LoRA微调大模型架构（推荐）
 
-项目使用**GPT-2 Medium**作为基础模型，通过**LoRA（Low-Rank Adaptation）**技术进行高效微调：
+项目默认使用**Qwen3-0.6B**作为基础模型，通过**LoRA（Low-Rank Adaptation）**技术进行高效微调：
 
-1. **基础模型**: GPT-2 Medium（345M参数）
-   - 使用预训练的GPT-2语言模型
-   - 具有强大的序列理解能力
+1. **基础模型**: Qwen/Qwen3-0.6B（约0.6B参数）
+   - 支持中英文语料，语义理解能力强
+   - 模型体积适中，便于单卡训练
 
 2. **LoRA适配器**:
    - 只训练少量参数（通常<1%的模型参数）
@@ -157,12 +160,12 @@ python framework.py --model_path model.pth --test_csv sample_test.csv
 ## 参数说明
 
 ### download_model.py 参数
-- `--model`: 要下载的模型（`gpt2`, `gpt2-medium`, `gpt2-large`, `gpt2-xl`）
-- `--save_dir`: 模型保存目录（默认：`./models`）
+- `--model`: 要下载的模型（默认：`Qwen/Qwen3-0.6B`）
+- `--save_dir`: 模型保存目录（默认：`./Qwen3-0.6B`）
 
 ### train_lora.py 参数（LoRA微调）
 - `--data`: 训练数据CSV文件路径
-- `--model_path`: 预训练模型路径（默认：`./models/gpt2-medium`）
+- `--model_path`: 预训练模型路径（默认：`./Qwen3-0.6B`）
 - `--epochs`: 训练轮数（默认：20）
 - `--batch_size`: 批次大小（默认：4，大模型建议使用小批次）
 - `--learning_rate`: 学习率（默认：1e-4）
@@ -200,17 +203,16 @@ python framework.py --model_path model.pth --test_csv sample_test.csv
 
 ## 推荐模型
 
-**推荐使用 GPT-2 Medium（345M参数）**，原因：
-- ✅ 参数量适中，适合单GPU训练
-- ✅ 资源需求较低（约需要6-8GB GPU内存）
-- ✅ 在时间序列任务上表现良好
-- ✅ 易于集成LoRA微调
-- ✅ 训练速度快，收敛稳定
+**推荐使用 Qwen/Qwen3-0.6B（约0.6B参数）**，原因：
+- ✅ 中英文双向支持，适合中文金融描述
+- ✅ 参数量适中（单卡12GB即可运行）
+- ✅ 与 LoRA 结合后显存占用低，可快速实验
+- ✅ 兼容 `trust_remote_code=True` 的最新特性
 
 其他可选模型：
-- **GPT-2** (124M): 最小模型，适合资源受限环境
-- **GPT-2 Large** (774M): 更大容量，需要更多GPU内存
-- **GPT-2 XL** (1.5B): 最大模型，需要16GB+ GPU内存
+- **Qwen/Qwen1.5-0.5B**：更轻量，适合显存较小的环境
+- **Qwen/Qwen1.5-1.8B**：更高精度，但显存需求更高
+- 也可以尝试 Llama / GPT-NeoX / InternLM 等，只需调整 `--model_path`
 
 ## 注意事项
 
